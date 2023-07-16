@@ -1,0 +1,124 @@
+# Персонажи
+define p = Character("Антон")
+define c = Character("Бот")
+
+screen gamescreen:
+add "images/room.jpg"
+add "images/board.png" at left
+add "images/board.png" at right
+
+init python:
+
+import random
+
+class Ship:
+def __init__(self, length):
+self.length = length
+self.hits = 0
+
+def is_sunk(self):
+return self.hits >= self.length
+
+class Board:
+def __init__(self):
+self.grid = [[0 for x in range(10)] for y in range(10)]
+self.ships = []
+
+def add_ship(self, ship):
+for i in range(ship.length):
+x = random.randint(0,9)
+y = random.randint(0,9)
+while self.grid[x][y] == 1:
+x = random.randint(0,9)
+y = random.randint(0,9)
+self.grid[x][y] = 1
+ship.x = x
+ship.y = y
+self.ships.append(ship)
+
+def receive_attack(self, x, y):
+if self.grid[x][y] == 1:
+for ship in self.ships:
+if ship.x == x and ship.y == y:
+ship.hits += 1
+self.grid[x][y] = 2
+return True
+else:
+self.grid[x][y] = 3
+return False
+
+def all_sunk(self):
+for ship in self.ships:
+if not ship.is_sunk():
+return False
+return True
+
+
+init:
+python:
+player_board = Board()
+cpu_board = Board()
+
+# Add random ships
+for i in [5, 4, 3, 3, 2]:
+ship = Ship(i)
+player_board.add_ship(ship)
+
+for i in [5, 4, 3, 3, 2]:
+ship = Ship(i)
+cpu_board.add_ship(ship)
+
+$ player_turn = True
+
+label start:
+
+show screen gamescreen
+
+if player_turn:
+p "Моя очередь! Я пожалуй выберу:"
+$ coord = renpy.input("Координаты: ").upper()
+$ x = ord(coord[0]) - 65
+$ y = int(coord[1]) - 1
+
+if x < 0 or x > 9 or y < 0 or y > 9:
+p "Хм, помоему не туда!"
+jump start
+
+python:
+hit = cpu_board.receive_attack(x, y)
+if hit:
+p "Попал!"
+else:
+p "Промах!"
+if cpu_board.all_sunk():
+jump player_win
+
+$ player_turn = False
+
+
+else:
+c "А теперь я!"
+python:
+x = random.randint(0,9)
+y = random.randint(0,9)
+hit = player_board.receive_attack(x, y)
+
+if hit:
+c "Я подбил твой корабль!"
+else:
+c "Я не попал!"
+
+if player_board.all_sunk():
+jump cpu_win
+
+$ player_turn = True
+
+jump start
+
+label player_win:
+p "Я подбил весь твой флот, я выиграл!"
+return
+
+label cpu_win:
+c "Я раздолбил все твои корабли, я победил!"
+return
